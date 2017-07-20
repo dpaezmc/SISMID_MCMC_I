@@ -31,7 +31,7 @@ log.likelihood = function(my.al,my.be,q.vec){
  return(sum(log(dbeta(q.vec,my.al,my.be))))
  }
 
-chain_hierarchical_reduced = function(mcmc.size){
+chain_hierarchical = function(mcmc.size){
 # This is the main sampling routine. The data, the parameters of the 
 # prior distributon and the 'tuning parameters' (= the proposal window widths)
 # are hard-wired in this code. In addition to the two model parameters (alpha and beta), 
@@ -41,7 +41,7 @@ chain_hierarchical_reduced = function(mcmc.size){
 #
 # INPUT mcmc.size = the number of MCMC iterations to be sampled
 #
-# OUTPUT chain_hierarchical_reduced = the MCMC sample of parameters 'alpha' and 'beta'
+# OUTPUT chain_hierarchical = the MCMC sample of parameters 'alpha' and 'beta'
 #                             of the Beta distribution for household specific
 #                             escape probabilities
 
@@ -50,10 +50,10 @@ delta.alpha = 0.25 # for parameter alpha
 delta.beta  = 0.40 # for parameter beta
 
 # Step (a): Reserve space for the MCMC samples
-al      = rep(0,mcmc.size) # parameter alpha
-be      = rep(0,mcmc.size) # parameter beta
-q       = matrix(0,nrow=mcmc.size,ncol=334) # escape probabilities
-n111    = matrix(0,nrow=mcmc.size,ncol=275) # chain identity (1 if n111, and 0 if n12)
+al      = rep(0,mcmc.size)
+be      = rep(0,mcmc.size)
+q       = matrix(0,nrow=mcmc.size,ncol=334)
+n111    = matrix(0,nrow=mcmc.size,ncol=275)
 
 # Step (b): Initialize
 cur.alpha = 1
@@ -78,19 +78,19 @@ for (i in 2:mcmc.size){
  ####################################################
  # households with chain 1
  for (j in 1:n1){
-   q[i,j] = ...   # YOUR TASK IS TO COMPLETE THIS. USE THE 'rbeta' FUNCTION
+   q[i,j] = rbeta(1,2+ cur.alpha,cur.beta)
    }
 
  # households with chain 1->1
  for (j in 1:n11){
-   q[i,j+n1] = ...# YOUR TASK IS TO COMPLETE THIS. USE THE 'rbeta' FUNCTION
+   q[i,j+n1] = rbeta(1,2+cur.alpha,1+cur.beta)
    }
 
  # households with chain 1->1->1 or 1->2
- # N.B. In household j, the (current iterate of the) 
- #      number of escapes is equal to n111[i-1,j]
+ # N.B. In household j, the (current iterate of the) number 
+ #      of escapes is equal to n111[i-1,j]
  for (j in 1:275){
-   q[i,j+n1+n11] = ... # YOUR TASK IS TO COMPLETE THIS. USE THE 'rbeta' FUNCTION
+   q[i,j+n1+n11] = rbeta(1,n111[i-1,j]+cur.alpha,2+cur.beta)
    }
 
 
@@ -111,10 +111,10 @@ for (i in 2:mcmc.size){
  # Propose a new value for parameter alpha
  new.alpha = propose.par(cur.alpha,runif(1),delta.alpha)
 
- # If the proposed value is positive 
+ # If the proposed value if within the range of the parameter 
  if (new.alpha >0){
 
-   # The log likelihood ratio   
+   # The log acceptance ratio = the log likelihood ratio   
    log.likeratio.alpha = log.likelihood(new.alpha,cur.beta,q[i,]) - log.likelihood(cur.alpha,cur.beta,q[i,]) 
 
    # The log acceptance ratio = the log-posterior ratio (since a symmetric proposals are being made)
@@ -133,7 +133,7 @@ for (i in 2:mcmc.size){
  # Propose a new value for parameter beta
  new.beta  = propose.par(cur.beta,runif(1),delta.beta)
 
- # If the proposed value is positive
+ # If the proposed value is withing the range of the parameter
  if (new.beta > 0) { 
   
    # The log likelihood ratio
@@ -163,7 +163,7 @@ return(list(al=al,be=be))
 
 # Call the main routine
 mcmc.size = 10000
-mcmc.sample = chain_hierarchical_reduced(mcmc.size)
+mcmc.sample = chain_hierarchical(mcmc.size)
 mcmc.al = mcmc.sample$al
 mcmc.be = mcmc.sample$be
 
@@ -181,7 +181,7 @@ hist(mcmc.be,xlab='beta',main='')
 par(mfrow=c(1,1))
 plot(mcmc.al,mcmc.be,xlab='alpha',ylab='beta')
 
-# Plot the posterior distribution of the exptected escape probability
+# Plot the posterior distribution of the expected escape probability
 hist(mcmc.al/(mcmc.al+ mcmc.be),breaks=20,xlab='expected escape probability',main='')
 
 # Plot the posterior predictive distribution of the escape probability
